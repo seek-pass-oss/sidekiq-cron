@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 2.4.0
+
+- Fix reflected XSS on Sidekiq-UI (https://github.com/sidekiq-cron/sidekiq-cron/pull/568)
+- Add `cron_process_count_override` config option (https://github.com/sidekiq-cron/sidekiq-cron/pull/572)
+- Fix Spanish translation for enabled/disabled states (https://github.com/sidekiq-cron/sidekiq-cron/pull/575)
+- Allow to conditionally disable Sidekiq-Cron (https://github.com/sidekiq-cron/sidekiq-cron/pull/574)
+
 ## 2.3.1
 
 - Fix manually launch enqueue job not working from web UI (https://github.com/sidekiq-cron/sidekiq-cron/pull/564)
