@@ -250,8 +250,8 @@ module Sidekiq
 
       # Like #load_from_hash.
       # If exists old jobs in Redis but removed from args, destroy old jobs.
-      def self.load_from_hash!(hash, options = {}, namespace: nil)
-        destroy_removed_jobs(hash.keys, namespace: namespace)
+      def self.load_from_hash!(hash, options = {})
+        destroy_removed_jobs(hash.keys, namespace: options[:namespace])
         load_from_hash(hash, options)
       end
 
@@ -284,9 +284,9 @@ module Sidekiq
 
       # Like #load_from_array.
       # If exists old jobs in Redis but removed from args, destroy old jobs.
-      def self.load_from_array!(array, options = {}, namespace: nil)
+      def self.load_from_array!(array, options = {})
         job_names = array.map { |job| job["name"] || job[:name] }
-        destroy_removed_jobs(job_names, namespace: namespace)
+        destroy_removed_jobs(job_names, namespace: options[:namespace])
         load_from_array(array, options)
       end
 
