@@ -411,8 +411,8 @@ Sidekiq::Cron::Job.load_from_array array
 Bang-suffixed methods will remove jobs where source is `schedule` and are not present in the given hash/array, update jobs that have the same names, and create new ones when the names are previously unknown. Pass `namespace` in the options hash so prune and create use the same namespace:
 
 ```ruby
-Sidekiq::Cron::Job.load_from_hash! hash, { source: 'schedule', namespace: 'candidate' }
-Sidekiq::Cron::Job.load_from_array! array, { source: 'schedule', namespace: 'candidate' }
+Sidekiq::Cron::Job.load_from_hash! hash, source: 'schedule', namespace: 'domain_a'
+Sidekiq::Cron::Job.load_from_array! array, source: 'schedule', namespace: 'domain_a'
 ```
 
 ### Loading jobs from schedule file
@@ -460,7 +460,7 @@ There are multiple ways to load the jobs from a YAML file
         if File.exist?(schedule_file)
           schedule = YAML.load_file(schedule_file)
 
-          Sidekiq::Cron::Job.load_from_hash!(schedule, { source: "schedule" })
+          Sidekiq::Cron::Job.load_from_hash!(schedule, source: "schedule")
         end
       end
     end
