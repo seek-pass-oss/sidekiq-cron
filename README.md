@@ -71,6 +71,7 @@ All configuration options:
 Sidekiq::Cron.configure do |config|
   config.enabled = false # Default is true
   config.cron_poll_interval = 10 # Default is 30
+  config.cron_poll_namespace = 'my_namespace' # Default is nil (polls all namespaces)
   config.cron_schedule_file = 'config/my_schedule.yml' # Default is 'config/schedule.yml'. Set to `nil` to disable automatic loading.
   config.cron_history_size = 20 # Default is 10
   config.default_namespace = 'statistics' # Default is 'default'
@@ -185,6 +186,53 @@ By default, Sidekiq Cron uses the available_namespaces configuration option to d
 If you want Sidekiq Cron to automatically detect existing namespaces from the Redis database, you can set `available_namespaces` to the special option `:auto`.
 
 If available_namespaces is explicitly set and a job is created with an unexpected namespace, a warning will be printed, and the job will be assigned to the default namespace.
+
+#### Namespace-aware polling
+
+**Use case:** Multi-tenant or multi-domain applications where different worker processes should manage separate sets of scheduled jobs.
+
+By default, all Sidekiq::Cron worker processes poll all namespaces for scheduled jobs. If you want to restrict a worker to only poll and manage jobs from a specific namespace, use `cron_poll_namespace`:
+
+```ruby
+Sidekiq::Cron.configure do |config|
+  config.cron_poll_namespace = 'my_namespace'  # Only poll this namespace
+  config.available_namespaces = %w[namespace_a namespace_b]  # All namespaces that exist
+end
+```
+
+**Behavior:**
+
+- When `cron_poll_namespace` is **set**: The worker only polls the specified namespace and ignores jobs in other namespaces
+- When `cron_poll_namespace` is **nil** (default): The worker polls all namespaces using `'*'` (backward compatible)
+
+**Example: Multi-domain application**
+
+```ruby
+# Worker process A
+Sidekiq::Cron.configure do |config|
+  config.cron_poll_namespace = 'domain_a'
+  config.available_namespaces = %w[domain_a domain_b]
+end
+
+Sidekiq::Cron::Job.load_from_array!(domain_a_jobs, namespace: 'domain_a')
+
+# Worker process B (separate process)
+Sidekiq::Cron.configure do |config|
+  config.cron_poll_namespace = 'domain_b'
+  config.available_namespaces = %w[domain_a domain_b]
+end
+
+Sidekiq::Cron::Job.load_from_array!(domain_b_jobs, namespace: 'domain_b')
+```
+
+**Benefits:**
+
+- **Namespace isolation**: Each worker only manages its own scheduled jobs
+- **No cross-namespace interference**: Workers don't accidentally remove jobs from other namespaces during startup
+- **Reduced Redis load**: Workers only query the namespace they care about
+- **Clean separation of concerns**: Different domains/tenants managed by dedicated workers
+
+**Important note:** This controls **polling and enqueuing** of scheduled jobs, not their execution. Which worker executes an enqueued job is still controlled by Sidekiq's `-q` queue configuration.
 
 #### Migrating to 2.3
 
@@ -360,11 +408,11 @@ array = [
 Sidekiq::Cron::Job.load_from_array array
 ```
 
-Bang-suffixed methods will remove jobs where source is `schedule` and are not present in the given hash/array, update jobs that have the same names, and create new ones when the names are previously unknown.
+Bang-suffixed methods will remove jobs where source is `schedule` and are not present in the given hash/array, update jobs that have the same names, and create new ones when the names are previously unknown. Pass `namespace` in the options hash so prune and create use the same namespace:
 
 ```ruby
-Sidekiq::Cron::Job.load_from_hash! hash
-Sidekiq::Cron::Job.load_from_array! array
+Sidekiq::Cron::Job.load_from_hash! hash, { source: 'schedule', namespace: 'candidate' }
+Sidekiq::Cron::Job.load_from_array! array, { source: 'schedule', namespace: 'candidate' }
 ```
 
 ### Loading jobs from schedule file
@@ -412,7 +460,7 @@ There are multiple ways to load the jobs from a YAML file
         if File.exist?(schedule_file)
           schedule = YAML.load_file(schedule_file)
 
-          Sidekiq::Cron::Job.load_from_hash!(schedule, source: "schedule")
+          Sidekiq::Cron::Job.load_from_hash!(schedule, { source: "schedule" })
         end
       end
     end
