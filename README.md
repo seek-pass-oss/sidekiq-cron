@@ -71,7 +71,7 @@ All configuration options:
 Sidekiq::Cron.configure do |config|
   config.enabled = false # Default is true
   config.cron_poll_interval = 10 # Default is 30
-  config.cron_poll_namespace = 'my_namespace' # Default is nil (polls all namespaces)
+  config.cron_poll_namespace = 'domain_a' # Default is nil (polls all namespaces)
   config.cron_schedule_file = 'config/my_schedule.yml' # Default is 'config/schedule.yml'. Set to `nil` to disable automatic loading.
   config.cron_history_size = 20 # Default is 10
   config.default_namespace = 'statistics' # Default is 'default'
@@ -375,7 +375,7 @@ array = [
 Sidekiq::Cron::Job.load_from_array array
 ```
 
-Bang-suffixed methods remove jobs not in the array, update existing ones, and create new ones:
+Bang-suffixed methods will remove jobs where source is `schedule` and are not present in the given hash/array, update jobs that have the same names, and create new ones when the names are previously unknown.
 
 ```ruby
 Sidekiq::Cron::Job.load_from_hash! hash, namespace: 'domain_a'
