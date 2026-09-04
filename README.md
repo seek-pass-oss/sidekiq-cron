@@ -189,17 +189,23 @@ If available_namespaces is explicitly set and a job is created with an unexpecte
 
 #### Namespace-aware polling
 
-By default, all workers poll all namespaces (`'*'`). To restrict a worker to poll only a specific namespace:
+By default, the poller enqueues jobs from all namespaces (`'*'`). Set `cron_poll_namespace` so a process only **enqueues** jobs from one namespace:
 
 ```ruby
 Sidekiq::Cron.configure do |config|
-  config.cron_poll_namespace = 'domain_a'  # Only poll this namespace (nil = all)
+  config.cron_poll_namespace = 'domain_a'  # nil = all namespaces
 end
-
-Sidekiq::Cron::Job.load_from_array!(jobs, namespace: 'domain_a')
 ```
 
-This controls **polling** (which jobs to check and enqueue), not **execution** (which worker runs them - use Sidekiq's `-q` flag for that).
+This does not change which process **executes** the job. That is still Sidekiq's `-q` queues.
+
+#### Namespace-scoped bang load
+
+`load_from_array!` / `load_from_hash!` prune `schedule` jobs missing from the given list. Pass `namespace` in the options hash so prune and create use the same namespace:
+
+```ruby
+Sidekiq::Cron::Job.load_from_array!(jobs, { namespace: 'domain_a' })
+```
 
 #### Migrating to 2.3
 
@@ -378,8 +384,8 @@ Sidekiq::Cron::Job.load_from_array array
 Bang-suffixed methods will remove jobs where source is `schedule` and are not present in the given hash/array, update jobs that have the same names, and create new ones when the names are previously unknown.
 
 ```ruby
-Sidekiq::Cron::Job.load_from_hash! hash, namespace: 'domain_a'
-Sidekiq::Cron::Job.load_from_array! array, namespace: 'domain_a'
+Sidekiq::Cron::Job.load_from_hash! hash, { namespace: 'domain_a' }
+Sidekiq::Cron::Job.load_from_array! array, { namespace: 'domain_a' }
 ```
 
 ### Loading jobs from schedule file
